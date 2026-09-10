@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análise de retenção — dados, não figuras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ink:#1B1E2B; --ink-2:#4A4F63; --ink-3:#787E94;
+  --canvas:#F1F2F6; --surface:#FFFFFF; --surface-2:#F7F8FB;
+  --rule:#DFE1EA; --rule-2:#EDEEF3; --grid:#E6E8EF;
+  --navy:#29377F; --navy-soft:#E7E9F4;
+  --mag:#C22258; --mag-soft:#FBE7EE;
+  --warn:#B4700F; --warn-soft:#FBF0DC;
+  --ok:#227A63;
+  --code:#1D212C; --code-ink:#E6E8F0; --code-kw:#8ab4f8; --code-cmt:#7f8ea3;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#EDEEF4; --ink-2:#AEB3C6; --ink-3:#7A8098;
+    --canvas:#0E1018; --surface:#171A24; --surface-2:#1D212C;
+    --rule:#2B3040; --rule-2:#232735; --grid:#262B3A;
+    --navy:#8E9CE8; --navy-soft:#1E2440;
+    --mag:#F2708F; --mag-soft:#331924;
+    --warn:#E5A845; --warn-soft:#2E2416;
+    --ok:#5FC5A8;
+    --code:#0A0C12; --code-ink:#D8DCE8;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--canvas); color:var(--ink); font-size:15px; line-height:1.55;
+  font-family:"IBM Plex Sans",-apple-system,"Segoe UI",system-ui,sans-serif}
+h1,h2{font-family:Archivo; margin:0; letter-spacing:-.2px}
+
+/* ---------- topo ---------- */
+header{background:var(--surface); border-bottom:1px solid var(--rule); padding:16px 26px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap; position:sticky; top:0; z-index:20}
+header h1{font-size:18.5px}
+header .sub{font-size:12.5px; color:var(--ink-3); margin-top:2px}
+header .esq{margin-right:auto}
+.selo{background:var(--warn-soft); color:var(--warn); border-radius:6px; padding:3px 9px;
+  font-family:"IBM Plex Mono"; font-size:10.5px; white-space:nowrap}
+a.botao{text-decoration:none; background:var(--navy-soft); color:var(--navy);
+  border-radius:7px; padding:7px 14px; font-size:13px; font-weight:600}
+
+main{max-width:1300px; margin:0 auto; padding:20px 26px 70px}
+
+/* ---------- filtros ---------- */
+.filtros{background:var(--surface); border:1px solid var(--rule); border-radius:11px;
+  padding:14px 18px; margin-bottom:18px; display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end}
+.campo{display:flex; flex-direction:column; gap:4px; min-width:132px}
+.campo label{font-family:"IBM Plex Mono"; font-size:9.5px; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--ink-3)}
+.campo select, .campo input{border:1px solid var(--rule); border-radius:7px; padding:7px 9px;
+  font:inherit; font-size:13px; background:var(--surface-2); color:var(--ink)}
+.campo select:focus, .campo input:focus{outline:2px solid var(--navy); outline-offset:1px}
+.filtros .fim{margin-left:auto; display:flex; gap:9px; align-items:center}
+.contagem{font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-2)}
+.contagem b{color:var(--mag)}
+button.mini{appearance:none; background:var(--surface-2); border:1px solid var(--rule);
+  border-radius:6px; color:var(--ink-2); font:inherit; font-size:12px; padding:6px 12px; cursor:pointer}
+button.mini:hover{color:var(--ink); border-color:var(--ink-3)}
+button.mini.ativo{background:var(--mag-soft); color:var(--mag); border-color:transparent}
+
+/* ---------- kpis ---------- */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  background:var(--surface); border:1px solid var(--rule); border-radius:11px;
+  overflow:hidden; margin-bottom:18px}
+.kpi{padding:13px 17px; border-right:1px solid var(--rule-2)}
+.kpi:last-child{border-right:0}
+.kpi .k{font-family:"IBM Plex Mono"; font-size:9.5px; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--ink-3)}
+.kpi .v{font-family:Archivo; font-weight:700; font-size:24px; line-height:1.2;
+  font-variant-numeric:tabular-nums; margin-top:2px}
+.kpi.mag .v{color:var(--mag)} .kpi.nav .v{color:var(--navy)}
+
+/* ---------- premissas ---------- */
+details.premissas{background:var(--surface); border:1px solid var(--rule); border-radius:11px;
+  margin-bottom:18px; overflow:hidden}
+details.premissas > summary{padding:13px 18px; cursor:pointer; font-weight:600; font-size:14px;
+  list-style:none; display:flex; align-items:center; gap:10px}
+details.premissas > summary::-webkit-details-marker{display:none}
+details.premissas > summary::before{content:"▸"; color:var(--mag); font-size:12px}
+details.premissas[open] > summary::before{content:"▾"}
+details.premissas > summary .nota{font-weight:400; font-size:12.5px; color:var(--ink-3)}
+.premissas .corpo{padding:4px 18px 18px; display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end;
+  border-top:1px solid var(--rule-2)}
+.premissas input{width:96px; font-family:"IBM Plex Mono"; font-variant-numeric:tabular-nums}
+
+/* ---------- cartão de gráfico ---------- */
+.gr{background:var(--surface); border:1px solid var(--rule); border-radius:12px;
+  margin-bottom:20px; overflow:hidden}
+.gr > .topo{padding:15px 20px 12px}
+.gr h2{font-size:16px; margin-bottom:3px}
+.gr .perg{font-size:13.5px; color:var(--ink-2)}
+.gr .marcas{display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; align-items:center}
+.tag{font-family:"IBM Plex Mono"; font-size:10.5px; padding:3px 8px; border-radius:5px;
+  background:var(--surface-2); color:var(--ink-3); border:1px solid var(--rule-2)}
+.tag.slide{background:var(--mag-soft); color:var(--mag); border-color:transparent}
+.figura{padding:2px 14px 12px; position:relative}
+.figura svg{display:block; width:100%; height:auto; overflow:visible}
+.leitura{margin:0 20px 14px; background:var(--mag-soft); border-radius:8px; padding:10px 14px;
+  font-size:13px; line-height:1.45}
+.rodape-gr{display:flex; gap:9px; padding:0 20px 15px; flex-wrap:wrap; align-items:center}
+.dica{font-size:11.5px; color:var(--ink-3); margin-left:auto}
+
+/* elementos clicáveis do gráfico */
+[data-filtrar]{cursor:pointer}
+[data-tip]{transition:opacity .12s}
+.vazio{padding:40px 20px; text-align:center; color:var(--ink-3); font-size:13.5px}
+
+/* ---------- tooltip ---------- */
+#tip{position:fixed; z-index:60; pointer-events:none; opacity:0; transition:opacity .1s;
+  background:var(--code); color:var(--code-ink); border-radius:8px; padding:9px 12px;
+  font-size:12.5px; line-height:1.5; max-width:290px; box-shadow:0 8px 26px -8px rgba(0,0,0,.45)}
+#tip b{color:#fff}
+#tip .l{font-family:"IBM Plex Mono"; font-size:11px; opacity:.75}
+
+/* ---------- procedência e tabela ---------- */
+details.dobra{border-top:1px solid var(--rule-2)}
+details.dobra > summary{padding:11px 20px; cursor:pointer; font-size:12.5px; color:var(--ink-2);
+  list-style:none; font-family:"IBM Plex Mono"}
+details.dobra > summary::-webkit-details-marker{display:none}
+details.dobra > summary::before{content:"+ "; color:var(--mag)}
+details.dobra[open] > summary::before{content:"− "}
+details.dobra .conteudo{padding:0 20px 18px}
+.camada{display:flex; gap:14px; padding:14px 0; border-bottom:1px dashed var(--rule-2)}
+.camada:last-child{border-bottom:0}
+.camada .n{flex:none; width:24px; height:24px; border-radius:50%; background:var(--mag-soft);
+  color:var(--mag); font-family:Archivo; font-weight:700; font-size:12px;
+  display:flex; align-items:center; justify-content:center; margin-top:1px}
+.camada .c{min-width:0; flex:1}
+.camada .r{font-family:"IBM Plex Mono"; font-size:9.5px; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:6px}
+.camada .t{font-size:13px; color:var(--ink-2); line-height:1.55}
+.camada .obs{font-size:11.5px; color:var(--ink-3); margin-top:7px; line-height:1.45}
+.camada code{font-family:"IBM Plex Mono"; font-size:11px; background:var(--surface-2);
+  padding:1px 5px; border-radius:4px; color:var(--ink-2)}
+ol.passos{margin:0; padding-left:20px; font-size:13px; color:var(--ink-2); line-height:1.55}
+ol.passos li{margin-bottom:6px}
+ol.passos li::marker{color:var(--mag); font-family:"IBM Plex Mono"; font-size:11.5px}
+table.visual{border-collapse:collapse; width:100%; margin-top:2px}
+table.visual th{text-align:left; padding:4px 12px 4px 0; font-family:"IBM Plex Sans";
+  font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap;
+  border:0; background:none; text-transform:none; letter-spacing:0; position:static}
+table.visual td{padding:4px 0; font-size:12.5px; color:var(--ink-2); text-align:left;
+  border:0; white-space:normal}
+pre.sql{background:var(--code); color:var(--code-ink); border-radius:8px; margin:8px 0 0;
+  padding:11px 13px; font-family:"IBM Plex Mono"; font-size:11px; line-height:1.5; overflow-x:auto}
+/* As palavras-chave e os comentarios sao o que torna uma consulta de 30 linhas
+   LEGIVEL numa tela. O comentario carrega o porque de cada recorte -- ele nao e
+   ruido a apagar, e metade da explicacao. */
+pre.sql .kw{color:var(--code-kw); font-weight:600}
+pre.sql .cmt{color:var(--code-cmt); font-style:italic}
+.subdobra{margin-top:10px; border-top:1px dashed var(--rule-2); padding-top:9px}
+.subdobra > summary{cursor:pointer; font-family:"IBM Plex Mono"; font-size:10.5px;
+  letter-spacing:.05em; color:var(--ink-3); list-style:none}
+.subdobra > summary::-webkit-details-marker{display:none}
+.subdobra > summary::before{content:"+ "; color:var(--mag)}
+.subdobra[open] > summary::before{content:"− "}
+.subdobra > summary:hover{color:var(--mag)}
+.tab{overflow:auto; max-height:320px; border:1px solid var(--rule-2); border-radius:8px}
+table{border-collapse:collapse; width:100%; font-size:12px}
+th{position:sticky; top:0; background:var(--surface-2); font-family:"IBM Plex Mono"; font-size:10px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); font-weight:500;
+  text-align:right; padding:8px 10px; white-space:nowrap; border-bottom:1px solid var(--rule)}
+th:first-child{text-align:left}
+td{padding:6px 10px; border-bottom:1px solid var(--rule-2); text-align:right; white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+td:first-child{text-align:left}
+tbody tr:hover{background:var(--surface-2)}
+
+.carregando{text-align:center; padding:70px 20px; color:var(--ink-3)}
+.erro{background:var(--mag-soft); color:var(--mag); border-radius:10px; padding:16px 20px;
+  margin-bottom:18px; font-size:13.5px}
+.ocupado{opacity:.45; transition:opacity .15s}
+@media (max-width:900px){ .proc{grid-template-columns:1fr} }
+:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="esq">
+    <h1>Análise de retenção</h1>
+    <div class="sub">Dados do PostgreSQL, recalculados em pandas a cada filtro</div>
+  </div>
+  <span class="selo">dados fictícios</span>
+  <a class="botao" href="/chat">ir para o chat →</a>
+</header>
+
+<main>
+  <div class="filtros" id="filtros"></div>
+  <div id="alerta"></div>
+  <div class="kpis" id="kpis"></div>
+
+  <details class="premissas" id="premissas">
+    <summary>Premissas de custo
+      <span class="nota">— edite e veja o número mudar; o custo é recalculado do salário e do nível</span>
+    </summary>
+    <div class="corpo" id="premissasCorpo"></div>
+  </details>
+
+  <div id="lista"><div class="carregando">carregando…</div></div>
+</main>
+
+<div id="tip" role="tooltip"></div>
+
+<script>
+"use strict";
+
+/* ===========================================================================
+   FORMATAÇÃO — tudo em padrão brasileiro, porque o público é brasileiro
+   =========================================================================== */
+const nf = (v, c = 1) => (v === null || v === undefined || Number.isNaN(v))
+  ? "—" : Number(v).toLocaleString("pt-BR", {minimumFractionDigits: c, maximumFractionDigits: c});
+const pc = (v, c = 1) => v === null || v === undefined ? "—" : nf(v, c) + "%";
+const rs = (v) => v === null || v === undefined ? "—"
+  : "R$ " + Number(v).toLocaleString("pt-BR", {maximumFractionDigits: 0});
+const milhoes = (v) => "R$ " + nf(Number(v) / 1e6) + " M";
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g,
+  (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const MES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const mesBR = (iso) => { const d = new Date(iso + "T00:00:00");
+  return MES[d.getMonth()] + "/" + String(d.getFullYear()).slice(2); };
+
+let D = null;                 // o contexto vindo do servidor
+const FILTROS = ["area", "localidade", "nivel", "contrato", "performance", "tempo_de_casa"];
+const ROTULOS = {area:"Área", localidade:"Localidade", nivel:"Nível", contrato:"Contrato",
+                 performance:"Performance", tempo_de_casa:"Tempo de casa"};
+
+/* ===========================================================================
+   DESENHO — um SVG por gráfico, montado como string
+   ---------------------------------------------------------------------------
+   Cada marca recebe `data-tip`, e um único ouvinte no documento cuida do
+   tooltip. É mais barato que pendurar um listener por barra, e continua
+   funcionando depois de redesenhar tudo (o que acontece a cada filtro).
+   =========================================================================== */
+const C = {mag:"var(--mag)", navy:"var(--navy)", warn:"var(--warn)", ink3:"var(--ink-3)",
+           grid:"var(--grid)", ok:"var(--ok)"};
+
+function svgAbre(w, h) { return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">`; }
+function txt(x, y, t, o = {}) {
+  return `<text x="${x}" y="${y}" font-size="${o.s || 10}" fill="${o.c || C.ink3}"
+    text-anchor="${o.a || "start"}" font-family="${o.f || "IBM Plex Sans, sans-serif"}"
+    font-weight="${o.w || 400}">${esc(t)}</text>`;
+}
+function gridH(x0, x1, y, rot) {
+  return `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="${C.grid}" stroke-width="1"/>`
+       + txt(x0 - 8, y + 3.5, rot, {a: "end"});
+}
+const tip = (obj) => esc(JSON.stringify(obj));
+
+/* --- 1. linhas (evolução) ------------------------------------------------ */
+function gLinhas(d) {
+  d = d.filter((r) => r.turnover_12m !== null);
+  if (!d.length) return vazio("A janela de 12 meses ainda não fechou neste recorte.");
+  const W = 780, H = 300, L = 44, R = 16, T = 16, B = 46;
+  const max = Math.max(16, ...d.map((r) => r.turnover_12m)) * 1.1;
+  const xw = (W - L - R) / Math.max(1, d.length - 1), yh = H - T - B;
+  const X = (i) => L + i * xw, Y = (v) => T + yh - (v / max) * yh;
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = max / 4 * i; g += gridH(L, W - R, Y(v), nf(v, 0) + "%"); }
+  const linha = (k, cor, w) => `<path d="${d.map((r, i) => (i ? "L" : "M") + X(i).toFixed(1) + "," + Y(r[k]).toFixed(1)).join(" ")}"
+      fill="none" stroke="${cor}" stroke-width="${w}" stroke-linejoin="round"/>`;
+  g += `<path d="${d.map((r, i) => (i ? "L" : "M") + X(i).toFixed(1) + "," + Y(r.turnover_vol_12m).toFixed(1)).join(" ")}
+      L${X(d.length - 1)},${Y(0)} L${X(0)},${Y(0)} Z" fill="${C.mag}" opacity=".12"/>`;
+  g += linha("turnover_12m", C.navy, 2.4) + linha("turnover_vol_12m", C.mag, 2.6)
+     + linha("turnover_invol_12m", C.warn, 1.8);
+  d.forEach((r, i) => {
+    g += `<rect x="${X(i) - xw / 2}" y="${T}" width="${xw}" height="${yh}" fill="transparent"
+      data-tip='${tip({t: mesBR(r.mes), l: [["Total", pc(r.turnover_12m)],
+        ["Voluntário", pc(r.turnover_vol_12m)], ["Involuntário", pc(r.turnover_invol_12m)],
+        ["Quadro", nf(r.headcount_fim, 0)]]})}'/>`;
+    if (i % Math.ceil(d.length / 7) === 0 || i === d.length - 1)
+      g += txt(X(i), H - 24, mesBR(r.mes), {a: "middle"});
+  });
+  const u = d[d.length - 1];
+  g += `<circle cx="${X(d.length - 1)}" cy="${Y(u.turnover_12m)}" r="3.6" fill="${C.navy}"/>`
+     + `<circle cx="${X(d.length - 1)}" cy="${Y(u.turnover_vol_12m)}" r="3.6" fill="${C.mag}"/>`
+     + txt(X(d.length - 1) - 6, Y(u.turnover_12m) - 9, pc(u.turnover_12m), {a:"end", s:12.5, w:700, c:C.navy})
+     + txt(X(d.length - 1) - 6, Y(u.turnover_vol_12m) + 17, pc(u.turnover_vol_12m), {a:"end", s:12.5, w:700, c:C.mag})
+     + txt(X(0), Y(d[0].turnover_12m) - 9, pc(d[0].turnover_12m), {s:11.5, w:700, c:C.navy});
+  [["Total", C.navy, 0], ["Voluntário", C.mag, 92], ["Involuntário", C.warn, 200]].forEach(([n, c, dx]) => {
+    g += `<rect x="${L + dx}" y="${H - 11}" width="14" height="3" rx="1.5" fill="${c}"/>`
+       + txt(L + dx + 20, H - 6, n, {s: 11, c: "var(--ink-2)"});
+  });
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 2. barras duplas (quadro + saídas) ---------------------------------- */
+function gQuadro(d) {
+  const W = 780, H = 300, L = 46, R = 44, T = 16, B = 44;
+  const bw = (W - L - R) / d.length, yh = H - T - B;
+  const maxQ = Math.max(...d.map((r) => r.headcount_fim)) * 1.1;
+  const maxS = Math.max(6, ...d.map((r) => r.voluntarios + r.involuntarios)) * 1.25;
+  const X = (i) => L + i * bw, YQ = (v) => T + yh - v / maxQ * yh, YS = (v) => T + yh - v / maxS * yh;
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = maxQ / 4 * i; g += gridH(L, W - R, YQ(v), nf(v, 0)); }
+  for (let i = 0; i <= 4; i++) { const v = maxS / 4 * i;
+    g += txt(W - R + 8, YS(v) + 3.5, nf(v, 0)); }
+  d.forEach((r, i) => {
+    const hv = yh + T - YS(r.voluntarios), hi = yh + T - YS(r.voluntarios + r.involuntarios);
+    g += `<rect x="${X(i) + 1}" y="${YQ(r.headcount_fim)}" width="${bw - 2}"
+        height="${yh + T - YQ(r.headcount_fim)}" fill="${C.navy}" opacity=".13" rx="1"/>`
+      + `<rect x="${X(i) + bw * .27}" y="${YS(r.voluntarios + r.involuntarios)}" width="${bw * .46}"
+        height="${hi - hv}" fill="${C.warn}" rx="1"/>`
+      + `<rect x="${X(i) + bw * .27}" y="${YS(r.voluntarios)}" width="${bw * .46}" height="${hv}"
+        fill="${C.mag}" rx="1"/>`
+      + `<rect x="${X(i)}" y="${T}" width="${bw}" height="${yh}" fill="transparent"
+        data-tip='${tip({t: mesBR(r.mes), l: [["Quadro", nf(r.headcount_fim, 0)],
+          ["Admissões", nf(r.admissoes, 0)], ["Pedidos de demissão", nf(r.voluntarios, 0)],
+          ["Desligamentos", nf(r.involuntarios, 0)]]})}'/>`;
+    if (i % Math.ceil(d.length / 7) === 0 || i === d.length - 1)
+      g += txt(X(i) + bw / 2, H - 22, mesBR(r.mes), {a: "middle"});
+  });
+  g += txt(L, H - 6, "↑ quadro", {s: 10}) + txt(W - R, H - 6, "saídas no mês ↑", {s: 10, a: "end"});
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 3. barras verticais, clicáveis (tempo de casa) ---------------------- */
+function gBarras(d) {
+  if (!d.length) return vazio("Sem dados neste recorte.");
+  const ordem = ["0-12 meses", "1-2 anos", "2-3 anos", "3-5 anos", "5+ anos"];
+  d = d.slice().sort((a, b) => ordem.indexOf(a.valor) - ordem.indexOf(b.valor));
+  const W = 700, H = 290, L = 46, R = 16, T = 26, B = 44;
+  const max = Math.max(...d.map((r) => r.turnover_vol)) * 1.24;
+  const media = D.indicador.turnover_vol;
+  const bw = (W - L - R) / d.length, yh = H - T - B;
+  const Y = (v) => T + yh - v / max * yh;
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = max / 4 * i; g += gridH(L, W - R, Y(v), nf(v, 0) + "%"); }
+  d.forEach((r, i) => {
+    const x = L + i * bw + bw * .18, w = bw * .64;
+    const cor = r.turnover_vol > media * 1.5 ? C.mag : C.ink3;
+    g += `<rect x="${x}" y="${Y(r.turnover_vol)}" width="${w}" height="${yh + T - Y(r.turnover_vol)}"
+        rx="3" fill="${cor}" data-filtrar="tempo_de_casa:${esc(r.valor)}"
+        data-tip='${tip({t: r.valor, l: [["Turnover voluntário", pc(r.turnover_vol)],
+          ["Saídas voluntárias", nf(r.desl_voluntarios, 0)],
+          ["Exposição", nf(r.exposicao) + " FTE-ano"],
+          ["% das saídas", pc(r.share_saidas_vol)]], acao: "clique para filtrar"})}'/>`
+      + txt(x + w / 2, Y(r.turnover_vol) - 8, pc(r.turnover_vol), {a:"middle", s:12.5, w:700, c:cor})
+      + txt(x + w / 2, H - 22, r.valor, {a: "middle", s: 11});
+  });
+  g += `<line x1="${L}" y1="${Y(media)}" x2="${W - R}" y2="${Y(media)}" stroke="${C.navy}"
+      stroke-width="1.5" stroke-dasharray="4 3"/>`
+    + txt(W - R - 4, Y(media) - 6, "média do recorte " + pc(media), {a: "end", s: 10.5, c: C.navy});
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 4. passo (Kaplan-Meier) --------------------------------------------- */
+function gPasso(d) {
+  if (d.length < 2) return vazio("Recorte pequeno demais para estimar sobrevivência.");
+  const W = 700, H = 290, L = 44, R = 16, T = 22, B = 42;
+  const mx = Math.max(...d.map((r) => r.mes_de_casa));
+  const max = Math.max(...d.map((r) => r.risco_acumulado)) * 1.35;
+  const xw = (W - L - R) / mx, yh = H - T - B;
+  const X = (m) => L + m * xw, Y = (v) => T + yh - v / max * yh;
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = max / 4 * i; g += gridH(L, W - R, Y(v), nf(v, 0) + "%"); }
+  let cam = `M${X(0)},${Y(0)}`;
+  d.forEach((p, i) => { if (i) cam += ` L${X(p.mes_de_casa)},${Y(d[i-1].risco_acumulado)} L${X(p.mes_de_casa)},${Y(p.risco_acumulado)}`; });
+  g += `<path d="${cam} L${X(mx)},${Y(0)} Z" fill="${C.mag}" opacity=".12"/>`
+     + `<path d="${cam}" fill="none" stroke="${C.mag}" stroke-width="2.6" stroke-linejoin="round"/>`;
+  d.forEach((p) => {
+    g += `<rect x="${X(p.mes_de_casa) - xw / 2}" y="${T}" width="${xw}" height="${yh}" fill="transparent"
+      data-tip='${tip({t: `mês ${p.mes_de_casa} de casa`, l: [
+        ["Já pediram demissão", pc(p.risco_acumulado)], ["Em observação", nf(p.em_risco, 0)]]})}'/>`;
+    if ([3, 6, 12, 18].includes(p.mes_de_casa))
+      g += `<circle cx="${X(p.mes_de_casa)}" cy="${Y(p.risco_acumulado)}" r="4.5" fill="${C.mag}"/>`
+         + txt(X(p.mes_de_casa), Y(p.risco_acumulado) - 11, pc(p.risco_acumulado),
+               {a:"middle", s:12, w:700, c:C.mag});
+    if (p.mes_de_casa % 3 === 0) g += txt(X(p.mes_de_casa), H - 22, p.mes_de_casa, {a: "middle"});
+  });
+  g += txt(W - R, H - 6, "meses de casa", {a: "end", s: 10.5});
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 5. barras agrupadas (coortes) --------------------------------------- */
+function gCoortes(d) {
+  d = d.filter((r) => r.saida_vol_3m !== null);
+  if (!d.length) return vazio("Nenhuma coorte com horizonte observável neste recorte.");
+  const W = 760, H = 312, L = 44, R = 16, T = 24, B = 76;
+  const max = Math.max(6, ...d.map((r) => Math.max(r.saida_vol_3m || 0, r.saida_vol_6m || 0))) * 1.24;
+  const bw = (W - L - R) / d.length, yh = H - T - B;
+  const Y = (v) => T + yh - v / max * yh;
+  const mediana = d.map((r) => r.saida_vol_3m).sort((a, b) => a - b)[Math.floor(d.length / 2)];
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = max / 4 * i; g += gridH(L, W - R, Y(v), nf(v, 0) + "%"); }
+  d.forEach((r, i) => {
+    const x = L + i * bw, alerta = r.saida_vol_3m > mediana * 2.5;
+    if (r.saida_vol_6m !== null)
+      g += `<rect x="${x + bw * .50}" y="${Y(r.saida_vol_6m)}" width="${bw * .30}"
+        height="${yh + T - Y(r.saida_vol_6m)}" rx="2" fill="${C.navy}" opacity=".55"
+        data-tip='${tip({t: r.coorte, l: [["Saíram até 6 meses", pc(r.saida_vol_6m)],
+          ["Contratações", nf(r.contratacoes, 0)]]})}'/>`;
+    g += `<rect x="${x + bw * .18}" y="${Y(r.saida_vol_3m)}" width="${bw * .30}"
+        height="${yh + T - Y(r.saida_vol_3m)}" rx="2" fill="${C.mag}"
+        data-tip='${tip({t: r.coorte, l: [["Saíram até 3 meses", pc(r.saida_vol_3m)],
+          ["Saíram até 6 meses", pc(r.saida_vol_6m)], ["Saíram até 12 meses", pc(r.saida_vol_12m)],
+          ["Contratações", nf(r.contratacoes, 0)]]})}'/>`;
+    if (alerta) g += txt(x + bw * .33, Y(r.saida_vol_3m) - 7, pc(r.saida_vol_3m),
+                         {a:"middle", s:11.5, w:700, c:C.mag});
+    g += `<text x="${x + bw / 2}" y="${H - 44}" font-size="10" fill="${C.ink3}" text-anchor="end"
+      transform="rotate(-34 ${x + bw / 2} ${H - 44})" font-family="IBM Plex Mono">${esc(r.coorte)}</text>`;
+  });
+  [["saíram até 3 meses", C.mag, 0], ["saíram até 6 meses", C.navy, 150]].forEach(([n, c, dx]) => {
+    g += `<rect x="${L + dx}" y="${H - 10}" width="11" height="7" rx="1.5" fill="${c}"/>`
+       + txt(L + dx + 17, H - 4, n, {s: 11, c: "var(--ink-2)"});
+  });
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 6. bolhas, clicáveis (prioridade) ----------------------------------- */
+function gBolhas(d) {
+  d = d.filter((r) => r.faixa_tempo_casa === "0-12 meses");
+  if (!d.length) return vazio("Sem segmentos de 0-12 meses com exposição suficiente.");
+  const W = 740, H = 330, L = 54, R = 26, T = 20, B = 48;
+  const maxX = Math.max(1, ...d.map((r) => r.excesso_saidas)) * 1.2;
+  const minX = Math.min(0, ...d.map((r) => r.excesso_saidas)) * 1.2;
+  const maxY = Math.max(...d.map((r) => r.turnover_vol)) * 1.14;
+  const minY = Math.min(...d.map((r) => r.turnover_vol)) * .82;
+  const X = (v) => L + (v - minX) / (maxX - minX) * (W - L - R);
+  const Y = (v) => T + (H - T - B) - (v - minY) / (maxY - minY) * (H - T - B);
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = minY + (maxY - minY) / 4 * i;
+    g += gridH(L, W - R, Y(v), nf(v, 0) + "%"); }
+  d.forEach((r) => {
+    const raio = Math.max(7, Math.sqrt(r.headcount) * 1.9);
+    const cor = r.excesso_saidas >= 6 ? C.mag : (r.excesso_saidas >= 2.5 ? C.warn : C.ink3);
+    g += `<circle cx="${X(r.excesso_saidas)}" cy="${Y(r.turnover_vol)}" r="${raio}" fill="${cor}"
+        opacity=".78" stroke="var(--surface)" stroke-width="2" data-filtrar="area:${esc(r.area)}"
+        data-tip='${tip({t: r.area + " · 0-12 meses", l: [["Turnover voluntário", pc(r.turnover_vol)],
+          ["Pessoas", nf(r.headcount, 0)], ["Saídas voluntárias", nf(r.saidas_vol, 0)],
+          ["Esperado no baseline", nf(r.esperado_no_baseline)],
+          ["Excesso", nf(r.excesso_saidas) + " saídas"],
+          ["Custo evitável", rs(r.custo_excesso)]], acao: "clique para filtrar"})}'/>`
+      + txt(X(r.excesso_saidas), Y(r.turnover_vol) + raio + 13, r.area,
+            {a: "middle", s: 10.5, w: 600, c: "var(--ink-2)"});
+  });
+  g += txt(W - R, H - 6, "excesso de saídas sobre o esperado →", {a: "end", s: 10.5})
+     + `<text x="14" y="${T + 10}" font-size="10.5" fill="${C.ink3}"
+        transform="rotate(-90 14 ${(H) / 2})">turnover voluntário do segmento</text>`;
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 7. barras horizontais (motivos) ------------------------------------- */
+function gMotivos(d) {
+  if (!d.length) return vazio("Nenhuma saída voluntária neste recorte.");
+  d = d.slice().sort((a, b) => a.quantidade - b.quantidade);
+  const ref = D.indicador;
+  const W = 720, rowH = 34, L = 190, R = 96, T = 8;
+  const H = T + d.length * rowH + 12;
+  const max = Math.max(...d.map((r) => r.quantidade)) * 1.16;
+  let g = "";
+  d.forEach((r, i) => {
+    const y = T + i * rowH, bw = Math.max(3, r.quantidade / max * (W - L - R));
+    const cor = i === d.length - 1 ? C.mag : (i >= d.length - 3 ? C.navy : C.ink3);
+    g += txt(L - 10, y + rowH / 2 + 4, r.motivo, {a: "end", s: 11.5, c: "var(--ink-2)"})
+      + `<rect x="${L}" y="${y + rowH / 2 - 9}" width="${bw}" height="18" rx="3" fill="${cor}"
+        data-tip='${tip({t: r.motivo, l: [["Saídas", nf(r.quantidade, 0)],
+          ["% das saídas", pc(r.share)], ["Engajamento médio", nf(r.engajamento_medio)],
+          ["Índice de liderança", nf(r.lideranca_media)], ["Compa-ratio", nf(r.compa_medio, 2)],
+          ["Tempo de casa", nf(r.tempo_casa_medio) + " anos"]]})}'/>`
+      + txt(L + bw + 9, y + rowH / 2 + 4, `${nf(r.quantidade, 0)}  (${pc(r.share, 0)})`,
+            {s: 11.5, w: 600, c: "var(--ink-2)"});
+  });
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 8. intervalo de confiança (fatores) --------------------------------- */
+function gFatores(d) {
+  // Descarta o que não tem estimativa finita: num recorte pequeno a regressão
+  // pode não convergir para um fator, e ele volta nulo. Desenhar mesmo assim
+  // quebraria a escala do eixo e levaria os outros junto.
+  const total = d.length;
+  d = d.filter((r) => Number.isFinite(r.odds_ratio) && Number.isFinite(r.ic_superior));
+  if (!d.length) return vazio("A regressão não convergiu neste recorte — poucas pessoas ou sem variação nos fatores.");
+  d = d.slice().sort((a, b) => a.odds_ratio - b.odds_ratio);
+  const descartados = total - d.length;
+  const W = 760, rowH = 32, L = 250, R = 62, T = 12;
+  const H = T + d.length * rowH + 34;
+  const max = Math.max(...d.map((r) => r.ic_superior)) * 1.1;
+  const X = (v) => L + v / max * (W - L - R);
+  let g = "";
+  d.forEach((r, i) => {
+    const y = T + i * rowH + rowH / 2, cor = r.significativo ? C.mag : C.ink3;
+    g += txt(L - 10, y + 4, r.fator, {a: "end", s: 11, c: "var(--ink-2)"})
+      + `<line x1="${X(r.ic_inferior)}" y1="${y}" x2="${X(r.ic_superior)}" y2="${y}"
+        stroke="${cor}" stroke-width="2.4" opacity=".5"/>`
+      + `<circle cx="${X(r.odds_ratio)}" cy="${y}" r="5.5" fill="${cor}"
+        data-tip='${tip({t: r.fator, l: [["Razão de chances", nf(r.odds_ratio, 2) + "x"],
+          ["IC 95%", nf(r.ic_inferior, 2) + " a " + nf(r.ic_superior, 2)],
+          ["p-valor", nf(r.p_valor, 4)],
+          ["Significativo a 5%", r.significativo ? "sim" : "não"]]})}'/>`
+      + txt(X(r.ic_superior) + 8, y + 4, nf(r.odds_ratio, 2) + "x", {s: 11, w: 700, c: cor});
+  });
+  g += `<line x1="${X(1)}" y1="${T}" x2="${X(1)}" y2="${H - 30}" stroke="var(--ink)" stroke-width="1.2"/>`
+     + txt(X(1), H - 14, "1,0 = sem associação", {a: "middle", s: 10.5});
+  if (descartados)
+    g += txt(L, H - 14, `${descartados} fator(es) sem estimativa neste recorte`,
+             {s: 10.5, c: "var(--mag)"});
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+/* --- 9. custo (barras + premissas editáveis) ----------------------------- */
+function gCusto(c) {
+  const itens = [["Saídas\nvoluntárias", c.custo_vol, C.mag],
+                 ["Saídas\ninvoluntárias", c.custo_invol, C.warn],
+                 ["Custo total\ndo turnover", c.custo_total, C.navy],
+                 ["do qual:\n0-12 meses", c.custo_entrada, C.mag]];
+  const W = 660, H = 290, L = 56, R = 16, T = 30, B = 52;
+  const max = Math.max(...itens.map((i) => i[1])) * 1.22;
+  const bw = (W - L - R) / itens.length, yh = H - T - B;
+  const Y = (v) => T + yh - v / max * yh;
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = max / 4 * i; g += gridH(L, W - R, Y(v), nf(v / 1e6, 0) + "M"); }
+  itens.forEach(([rot, v, cor], i) => {
+    const x = L + i * bw + bw * .18, w = bw * .64, op = i === 3 ? ".45" : "1";
+    g += `<rect x="${x}" y="${Y(v)}" width="${w}" height="${yh + T - Y(v)}" rx="3" fill="${cor}"
+        opacity="${op}" data-tip='${tip({t: rot.replace("\\n", " "), l: [["Valor", rs(v)],
+          ["% do custo total", pc(v / c.custo_total * 100, 0)]]})}'/>`
+      + txt(x + w / 2, Y(v) - 9, milhoes(v), {a: "middle", s: 12.5, w: 700, c: cor});
+    rot.split("\n").forEach((l, j) => { g += txt(x + w / 2, H - 30 + j * 13, l, {a: "middle", s: 10.5}); });
+  });
+  return svgAbre(W, H) + g + "</svg>";
+}
+
+function vazio(msg) { return `<div class="vazio">${esc(msg)}</div>`; }
+
+const DESENHOS = {linhas: gLinhas, barras_duplas: gQuadro, barras: gBarras, passo: gPasso,
+                  barras_agrupadas: gCoortes, bolhas: gBolhas, barras_h: gMotivos,
+                  intervalo: gFatores, custo: gCusto};
+
+/* ===========================================================================
+   MONTAGEM DA PÁGINA
+   =========================================================================== */
+function filtros() {
+  const html = FILTROS.map((c) => `
+    <div class="campo"><label for="f-${c}">${ROTULOS[c]}</label>
+      <select id="f-${c}" data-filtro="${c}">
+        <option value="todos">todos</option>
+        ${(D.opcoes[c] || []).map((o) =>
+          `<option value="${esc(o)}"${D.filtros[c] === o ? " selected" : ""}>${esc(o)}</option>`).join("")}
+      </select></div>`).join("");
+  const ativos = FILTROS.filter((c) => D.filtros[c] !== "todos").length;
+  document.getElementById("filtros").innerHTML = html + `
+    <div class="fim">
+      <span class="contagem"><b>${nf(D.pessoas, 0)}</b> pessoas no recorte</span>
+      <button class="mini${ativos ? " ativo" : ""}" id="limpar">
+        ${ativos ? `limpar ${ativos} filtro${ativos > 1 ? "s" : ""}` : "sem filtros"}</button>
+    </div>`;
+}
+
+function kpis() {
+  const i = D.indicador, c = D.custo;
+  const itens = [
+    ["Turnover total · 12 m", pc(i.turnover_total), "nav"],
+    ["Voluntário · 12 m", pc(i.turnover_vol), "mag"],
+    ["Quadro ativo", nf(i.headcount_ativo, 0), ""],
+    ["Saídas voluntárias", nf(i.desl_voluntarios, 0), "mag"],
+    ["Custo do turnover", milhoes(c.custo_total), ""],
+    ["Pela porta de entrada", milhoes(c.custo_entrada), "mag"],
+  ];
+  document.getElementById("kpis").innerHTML = itens.map(([k, v, cls]) =>
+    `<div class="kpi ${cls}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("");
+}
+
+function premissas() {
+  const p = D.premissas;
+  const campos = [["meses_ano", "Meses/ano", .01], ["encargos", "Encargos", .01]]
+    .concat(Object.keys(p).filter((k) => k.startsWith("fator_"))
+      .map((k) => [k, "Fator " + k.replace("fator_", ""), .05]));
+  document.getElementById("premissasCorpo").innerHTML = campos.map(([k, r, passo]) => `
+    <div class="campo"><label for="p-${k}">${esc(r)}</label>
+      <input id="p-${k}" type="number" step="${passo}" value="${p[k]}" data-premissa="${k}"></div>`).join("")
+    + `<div class="campo" style="min-width:auto"><label>&nbsp;</label>
+        <button class="mini" id="restaurar">restaurar padrões</button></div>`;
+}
+
+// -----------------------------------------------------------------------------
+// REALCE DO SQL, em ~10 linhas e sem biblioteca nenhuma.
+// Vai linha a linha e SEPARA o comentario do codigo antes de destacar as
+// palavras-chave -- senao o destaque entraria dentro do comentario e a cor de
+// comentario se perderia justamente onde esta a explicacao.
+// -----------------------------------------------------------------------------
+const PALAVRAS = /\b(WITH|SELECT|FROM|WHERE|AND|OR|NOT|AS|ON|GROUP|ORDER|BY|HAVING|CASE|WHEN|THEN|ELSE|END|FILTER|OVER|WINDOW|ROWS|BETWEEN|PRECEDING|CURRENT|ROW|CROSS|JOIN|INTERVAL|TIMESTAMP|DATE|NULL|IS|COALESCE|DISTINCT)\b/g;
+function sqlHtml(txt) {
+  return String(txt || "").split("\n").map((linha) => {
+    const corte = linha.indexOf("--");
+    const codigo = corte >= 0 ? linha.slice(0, corte) : linha;
+    const nota = corte >= 0 ? linha.slice(corte) : "";
+    return esc(codigo).replace(PALAVRAS, '<span class="kw">$1</span>')
+         + (nota ? `<span class="cmt">${esc(nota)}</span>` : "");
+  }).join("\n");
+}
+
+function cartao(g) {
+  const dados = g.chave === "custo" ? [D.custo] : (D[g.chave] || []);
+  const desenho = DESENHOS[g.tipo];
+  const svg = g.chave === "custo" ? desenho(D.custo) : desenho(dados);
+  const colunas = dados.length ? Object.keys(dados[0]) : [];
+  return `
+  <section class="gr" data-gr="${esc(g.id)}">
+    <div class="topo">
+      <h2>${esc(g.titulo)}</h2>
+      <div class="perg">${esc(g.pergunta)}</div>
+      <div class="marcas"><span class="tag slide">${esc(g.slide)}</span>
+        ${g.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+    </div>
+    <div class="figura">${svg}</div>
+    ${g.leitura ? `<div class="leitura"><b>Leitura:</b> ${esc(g.leitura)}</div>` : ""}
+    <details class="dobra"><summary>de onde veio este número</summary>
+      <div class="conteudo">
+        <div class="camada">
+          <div class="n">1</div>
+          <div class="c">
+            <div class="r">A consulta que reproduz este gráfico</div>
+            <div class="t">Devolve ${esc(g.devolve)}. O recorte próprio deste gráfico
+              já está dentro do <code>WHERE</code>, e os filtros da tela também —
+              é a consulta inteira, não um exemplo. Copie e rode no psql.</div>
+            <pre class="sql">${sqlHtml(g.sql)}</pre>
+            <div class="acoes"><button class="mini" data-sql="${esc(g.id)}">copiar consulta</button></div>
+            <details class="subdobra">
+              <summary>e o que a página executou, de verdade</summary>
+              <div class="t" style="margin-top:8px">A página não roda a consulta acima.
+                Ela executa <b>um</b> SELECT — este — e refaz as nove contas em
+                <b>pandas</b>. É o que permite editar uma premissa e ver os nove gráficos
+                mudarem juntos sem voltar ao banco.</div>
+              <pre class="sql">${sqlHtml(D.sql_executado)}</pre>
+              <div class="obs">Na execução os valores viajam como parâmetro
+                (<code>%s</code>), que é o que impede injeção; acima estão embutidos para
+                copiar e rodar. As duas contas são a mesma, e isso não é promessa:
+                <code>passos/passo30_conferir_sql.py</code> roda as nove consultas no banco
+                e compara valor a valor com o pandas — 656 comparações na base inteira.</div>
+            </details>
+          </div>
+        </div>
+
+        <div class="camada">
+          <div class="n">2</div>
+          <div class="c">
+            <div class="r">O recorte próprio deste gráfico</div>
+            <div class="t">${esc(g.recorte)}</div>
+          </div>
+        </div>
+
+        <div class="camada">
+          <div class="n">3</div>
+          <div class="c">
+            <div class="r">Como o número é calculado — ${esc(g.funcao)}</div>
+            <ol class="passos">${g.passos.map((p) => `<li>${esc(p)}</li>`).join("")}</ol>
+          </div>
+        </div>
+
+        <div class="camada">
+          <div class="n">4</div>
+          <div class="c">
+            <div class="r">O que cada elemento do gráfico representa</div>
+            <table class="visual"><tbody>${g.visual.map(([e, o]) =>
+              `<tr><th>${esc(e)}</th><td>${esc(o)}</td></tr>`).join("")}</tbody></table>
+            <div class="obs" style="margin-top:9px">Colunas usadas:
+              <code>${esc(g.colunas)}</code></div>
+          </div>
+        </div>
+      </div>
+    </details>
+    <details class="dobra"><summary>ver os ${dados.length} registro(s) que geraram o gráfico</summary>
+      <div class="conteudo"><div class="tab"><table>
+        <thead><tr>${colunas.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
+        <tbody>${dados.map((r) => `<tr>${colunas.map((c) =>
+          `<td>${typeof r[c] === "number" ? nf(r[c], Number.isInteger(r[c]) ? 0 : 2) : esc(r[c])}</td>`
+          ).join("")}</tr>`).join("")}</tbody>
+      </table></div>
+      <div class="rodape-gr" style="padding:12px 0 0">
+        <button class="mini" data-csv="${esc(g.id)}">baixar CSV</button></div>
+      </div>
+    </details>
+  </section>`;
+}
+
+function desenhar() {
+  filtros(); kpis(); premissas();
+  document.getElementById("lista").innerHTML = D.catalogo.map(cartao).join("");
+  document.getElementById("alerta").innerHTML = "";
+}
+
+/* ===========================================================================
+   INTERAÇÃO
+   =========================================================================== */
+const params = new URLSearchParams(location.search);
+
+async function buscar() {
+  const lista = document.getElementById("lista");
+  lista.classList.add("ocupado");
+  try {
+    const r = await fetch("/painel/api/contexto?" + params.toString());
+    const corpo = await r.json();
+    if (!r.ok) {
+      document.getElementById("alerta").innerHTML =
+        `<div class="erro">${esc(corpo.detail || corpo?.erro?.mensagem || "Não foi possível calcular este recorte.")}</div>`;
+      return;
+    }
+    D = corpo;
+    desenhar();
+    history.replaceState(null, "", params.toString() ? "?" + params : location.pathname);
+  } catch (e) {
+    document.getElementById("lista").innerHTML =
+      '<div class="carregando">Sem resposta do servidor. Ele está no ar?</div>';
+  } finally {
+    lista.classList.remove("ocupado");
+  }
+}
+
+let pendente = null;
+function agendar() { clearTimeout(pendente); pendente = setTimeout(buscar, 320); }
+
+document.addEventListener("change", (e) => {
+  const f = e.target.dataset.filtro, p = e.target.dataset.premissa;
+  if (f) {
+    e.target.value === "todos" ? params.delete(f) : params.set(f, e.target.value);
+    buscar();
+  } else if (p) {
+    params.set(p, e.target.value);
+    agendar();       // digitar número dispara muitos eventos; espera parar
+  }
+});
+
+document.addEventListener("click", (e) => {
+  // clicar numa barra ou bolha aplica o filtro correspondente
+  const alvo = e.target.closest("[data-filtrar]");
+  if (alvo) {
+    const [campo, valor] = alvo.dataset.filtrar.split(":");
+    params.get(campo) === valor ? params.delete(campo) : params.set(campo, valor);
+    buscar();
+    return;
+  }
+  if (e.target.id === "limpar") { FILTROS.forEach((c) => params.delete(c)); buscar(); return; }
+  if (e.target.id === "restaurar") {
+    [...params.keys()].filter((k) => !FILTROS.includes(k)).forEach((k) => params.delete(k));
+    buscar();
+    return;
+  }
+  if (e.target.dataset.sql) {
+    const b = e.target;
+    // Cada grafico copia A CONSULTA DELE, e nao a consulta comum de carga.
+    const g = (D.catalogo || []).find((x) => x.id === b.dataset.sql);
+    navigator.clipboard.writeText((g && g.sql) || D.sql_executado).then(() => {
+      b.textContent = "copiado ✓"; b.classList.add("ativo");
+      setTimeout(() => { b.textContent = "copiar consulta"; b.classList.remove("ativo"); }, 1800);
+    }).catch(() => { b.textContent = "selecione e copie"; });
+    return;
+  }
+  const csv = e.target.dataset.csv;
+  if (csv) baixarCSV(csv);
+});
+
+function baixarCSV(id) {
+  const g = D.catalogo.find((x) => x.id === id);
+  const dados = g.chave === "custo" ? [D.custo] : (D[g.chave] || []);
+  if (!dados.length) return;
+  const cols = Object.keys(dados[0]);
+  const linhas = [cols.join(";")].concat(dados.map((r) => cols.map((c) => {
+    const v = r[c];
+    return typeof v === "number" ? String(v).replace(".", ",") : (v ?? "");
+  }).join(";")));
+  const url = URL.createObjectURL(new Blob(["﻿" + linhas.join("\n")],
+    {type: "text/csv;charset=utf-8"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = id + ".csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* --- tooltip: um ouvinte só, delegado --------------------------------- */
+const elTip = document.getElementById("tip");
+document.addEventListener("mouseover", (e) => {
+  const alvo = e.target.closest("[data-tip]");
+  if (!alvo) return;
+  let d; try { d = JSON.parse(alvo.dataset.tip); } catch (err) { return; }
+  elTip.innerHTML = `<b>${esc(d.t)}</b>` +
+    d.l.map(([r, v]) => `<div><span class="l">${esc(r)}:</span> ${esc(v)}</div>`).join("") +
+    (d.acao ? `<div class="l" style="margin-top:5px">${esc(d.acao)}</div>` : "");
+  elTip.style.opacity = "1";
+});
+document.addEventListener("mousemove", (e) => {
+  if (elTip.style.opacity !== "1") return;
+  const m = 16, r = elTip.getBoundingClientRect();
+  let x = e.clientX + m, y = e.clientY + m;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - m;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - m;
+  elTip.style.left = x + "px"; elTip.style.top = y + "px";
+});
+document.addEventListener("mouseout", (e) => {
+  if (e.target.closest("[data-tip]")) elTip.style.opacity = "0";
+});
+
+buscar();
+</script>
+</body>
+</html>

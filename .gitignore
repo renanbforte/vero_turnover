@@ -1,0 +1,13 @@
+# =============================================================================
+# .gitignore — o que NUNCA vai para o GitHub
+# =============================================================================
+
+# O .env tem a chave da OpenAI e a senha do banco. Este repositorio e PUBLICO.
+.env
+
+# Ambiente virtual: pesado e recriavel com `uv sync`.
+.venv/
+
+# Lixo do Python.
+__pycache__/
+*.pyc

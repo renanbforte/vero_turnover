@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gente &amp; Gestao — assistente de retencao</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ---------------------------------------------------------------------------
+   As cores vivem em variaveis por um motivo pratico: o tema escuro redefine
+   SO as variaveis, e nenhum componente precisa saber que ele existe. Cor
+   escrita direto no componente e cor que fica errada num dos dois temas.
+   --------------------------------------------------------------------------- */
+:root{
+  --ink:#1B1E2B; --ink-2:#4A4F63; --ink-3:#787E94;
+  --canvas:#F1F2F6; --surface:#FFFFFF; --surface-2:#F7F8FB;
+  --rule:#DFE1EA; --rule-2:#EDEEF3;
+  --navy:#29377F; --navy-soft:#E7E9F4;
+  --mag:#C22258; --mag-soft:#FBE7EE;
+  --warn:#B4700F; --warn-soft:#FBF0DC;
+  --ok:#227A63;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#EDEEF4; --ink-2:#AEB3C6; --ink-3:#7A8098;
+    --canvas:#0E1018; --surface:#171A24; --surface-2:#1D212C;
+    --rule:#2B3040; --rule-2:#232735;
+    --navy:#8E9CE8; --navy-soft:#1E2440;
+    --mag:#F2708F; --mag-soft:#331924;
+    --warn:#E5A845; --warn-soft:#2E2416;
+    --ok:#5FC5A8;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--canvas); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,"Segoe UI",system-ui,sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* ---------- moldura ---------- */
+.app{display:flex; flex-direction:column; height:100dvh; max-width:860px; margin:0 auto}
+header{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:14px 20px; background:var(--surface); border-bottom:1px solid var(--rule);
+}
+header .nome{font-family:Archivo; font-weight:700; font-size:16px; letter-spacing:-.2px}
+header .sub{font-size:12px; color:var(--ink-3)}
+header .dir{display:flex; flex-direction:column; gap:1px; margin-right:auto}
+.selo{
+  background:var(--warn-soft); color:var(--warn); border-radius:6px; padding:3px 9px;
+  font-family:"IBM Plex Mono"; font-size:10.5px; letter-spacing:.03em; white-space:nowrap;
+}
+.quem{font-family:"IBM Plex Mono"; font-size:11.5px; color:var(--ink-3)}
+button.link{
+  appearance:none; background:none; border:0; color:var(--ink-3);
+  font:inherit; font-size:12px; cursor:pointer; text-decoration:underline; padding:0;
+}
+button.link:hover{color:var(--ink)}
+
+/* ---------- conversa ---------- */
+main{flex:1; overflow-y:auto; padding:22px 20px 8px; display:flex; flex-direction:column; gap:16px}
+.msg{display:flex; flex-direction:column; gap:5px; max-width:100%}
+.msg .quem-msg{
+  font-family:"IBM Plex Mono"; font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+.msg .balao{
+  background:var(--surface); border:1px solid var(--rule); border-radius:12px;
+  padding:13px 16px; white-space:normal;
+}
+.msg.eu{align-self:flex-end; align-items:flex-end; max-width:78%}
+.msg.eu .balao{background:var(--navy-soft); border-color:transparent; border-bottom-right-radius:4px}
+.msg.agente{align-self:flex-start; max-width:88%}
+.msg.agente .balao{border-bottom-left-radius:4px}
+.msg.erro .balao{background:var(--mag-soft); border-color:var(--mag); color:var(--ink)}
+.balao p{margin:0 0 10px}
+.balao p:last-child{margin-bottom:0}
+.balao ul{margin:6px 0 10px; padding-left:20px}
+.balao li{margin:3px 0}
+.balao strong{font-weight:600}
+.balao .fonte{
+  display:block; margin-top:10px; padding-top:8px; border-top:1px solid var(--rule-2);
+  font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-3);
+}
+.uso{font-family:"IBM Plex Mono"; font-size:10px; color:var(--ink-3)}
+
+/* pensando: tres pontos, sem biblioteca de animacao */
+.pensando{display:flex; gap:5px; padding:4px 2px}
+.pensando i{
+  width:6px; height:6px; border-radius:50%; background:var(--ink-3);
+  animation:pisca 1.2s infinite ease-in-out;
+}
+.pensando i:nth-child(2){animation-delay:.18s}
+.pensando i:nth-child(3){animation-delay:.36s}
+@keyframes pisca{0%,60%,100%{opacity:.25} 30%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.pensando i{animation:none; opacity:.5}}
+
+/* ---------- sugestoes ---------- */
+.sugestoes{display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 4px}
+.sugestoes button{
+  appearance:none; background:var(--surface); border:1px solid var(--rule);
+  border-radius:999px; padding:7px 14px; font:inherit; font-size:13px;
+  color:var(--ink-2); cursor:pointer;
+}
+.sugestoes button:hover{border-color:var(--navy); color:var(--ink)}
+
+/* ---------- entrada ---------- */
+footer{padding:12px 20px 18px; background:var(--canvas)}
+.caixa{
+  display:flex; gap:10px; align-items:flex-end; background:var(--surface);
+  border:1px solid var(--rule); border-radius:14px; padding:10px 10px 10px 16px;
+}
+.caixa:focus-within{border-color:var(--navy)}
+textarea{
+  flex:1; border:0; outline:0; resize:none; background:transparent; color:var(--ink);
+  font:inherit; max-height:160px; line-height:1.5; padding:4px 0;
+}
+textarea::placeholder{color:var(--ink-3)}
+.enviar{
+  appearance:none; border:0; border-radius:10px; background:var(--navy); color:#fff;
+  font:inherit; font-weight:600; font-size:14px; padding:9px 18px; cursor:pointer;
+}
+.enviar:disabled{opacity:.45; cursor:default}
+.rodape{margin-top:8px; font-size:11px; color:var(--ink-3); text-align:center}
+
+/* ---------- porta de entrada ---------- */
+.gate{
+  position:fixed; inset:0; background:var(--canvas); display:flex;
+  align-items:center; justify-content:center; padding:24px; z-index:10;
+}
+.gate form{
+  background:var(--surface); border:1px solid var(--rule); border-radius:14px;
+  padding:28px; width:min(420px,100%); display:flex; flex-direction:column; gap:14px;
+}
+.gate h1{font-family:Archivo; font-size:20px; margin:0; letter-spacing:-.3px}
+.gate p{margin:0; font-size:13px; color:var(--ink-2)}
+.gate label{display:flex; flex-direction:column; gap:5px; font-size:12.5px; color:var(--ink-2)}
+.gate input{
+  border:1px solid var(--rule); border-radius:9px; padding:10px 12px;
+  font:inherit; background:var(--surface-2); color:var(--ink);
+}
+.gate input:focus{outline:2px solid var(--navy); outline-offset:1px}
+.gate .erro{color:var(--mag); font-size:12.5px; min-height:1em}
+.gate .aviso{font-size:11.5px; color:var(--ink-3); line-height:1.45}
+:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- =========================================================================
+     A PORTA DE ENTRADA. Guarda login e senha no sessionStorage, que morre
+     quando a aba fecha -- diferente do localStorage, que ficaria no
+     computador ate alguem limpar. Num navegador compartilhado isso importa.
+     ========================================================================= -->
+<div class="gate" id="gate">
+  <form id="formEntrar" autocomplete="off">
+    <h1>Assistente de retencao</h1>
+    <p>Consulta a base de Gente &amp; Gestao e responde com analise. Acesso restrito.</p>
+    <label>Seu login
+      <input id="login" name="login" required maxlength="64"
+             pattern="[A-Za-z0-9._+@-]+" placeholder="ex.: renan">
+    </label>
+    <label>Senha de acesso
+      <input id="senha" name="senha" type="password" required placeholder="fornecida pelo administrador">
+    </label>
+    <div class="erro" id="gateErro" role="alert"></div>
+    <button class="enviar" type="submit">Entrar</button>
+    <p class="aviso">
+      Dados ficticios, criados para estudo. O assistente responde sobre grupos e
+      segmentos — nunca sobre pessoas identificadas.
+    </p>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
+  <header>
+    <div class="dir">
+      <span class="nome">Assistente de retencao</span>
+      <span class="sub">Gente &amp; Gestao — analise da base de turnover</span>
+    </div>
+    <span class="selo">dados ficticios</span>
+    <span class="quem" id="quem"></span>
+    <button class="link" id="sair" type="button">sair</button>
+  </header>
+
+  <main id="conversa" aria-live="polite"></main>
+
+  <div class="sugestoes" id="sugestoes">
+    <button type="button">Como esta o turnover da empresa?</button>
+    <button type="button">Por onde devemos comecar?</button>
+    <button type="button">Por que as pessoas estao saindo?</button>
+    <button type="button">Quanto isso esta custando?</button>
+  </div>
+
+  <footer>
+    <div class="caixa">
+      <textarea id="entrada" rows="1" maxlength="4000"
+                placeholder="Pergunte sobre a situacao da empresa..."></textarea>
+      <button class="enviar" id="enviar" type="button">Enviar</button>
+    </div>
+    <div class="rodape">
+      Enter envia, Shift+Enter quebra linha. As respostas vem da base carregada e
+      podem conter erro — confira antes de decidir.
+    </div>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const conversa = $("conversa");
+let sessao = null;      // {login, senha}
+
+/* ---------------------------------------------------------------------------
+   RENDERIZACAO DO TEXTO DO AGENTE
+   O agente responde em texto corrido com paragrafos e, as vezes, lista com "-".
+   Convertemos isso em HTML na mao em vez de trazer uma biblioteca de markdown:
+   sao tres regras, e uma dependencia a menos e uma superficie de ataque a menos.
+
+   ⚠️ A PRIMEIRA COISA E ESCAPAR. O texto vem de um modelo, e modelo pode ser
+   induzido a escrever HTML. Sem escapar, uma resposta com <script> dentro
+   executaria no navegador do diretor. Escapamos TUDO e so depois reintroduzimos
+   as poucas marcacoes que a gente mesmo cria.
+   --------------------------------------------------------------------------- */
+function escapar(t){
+  return t.replace(/[&<>"']/g, (c) => (
+    {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]
+  ));
+}
+
+function formatar(texto){
+  const blocos = escapar(texto.trim()).split(/\n{2,}/);
+  return blocos.map((bloco) => {
+    const linhas = bloco.split("\n");
+    const ehLista = linhas.every((l) => /^\s*[-•*]\s+/.test(l));
+    if (ehLista) {
+      const itens = linhas.map((l) => `<li>${negrito(l.replace(/^\s*[-•*]\s+/, ""))}</li>`);
+      return `<ul>${itens.join("")}</ul>`;
+    }
+    // A linha de fonte ganha tratamento proprio: ela e a rastreabilidade da
+    // resposta, e merece ficar visualmente separada do argumento.
+    if (/^\(fonte:/i.test(bloco)) return `<span class="fonte">${negrito(bloco)}</span>`;
+    return `<p>${negrito(linhas.join("<br>"))}</p>`;
+  }).join("");
+}
+
+function negrito(t){
+  return t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+function bolha(quem, html, classe){
+  const div = document.createElement("div");
+  div.className = `msg ${classe}`;
+  div.innerHTML = `<span class="quem-msg">${escapar(quem)}</span>` +
+                  `<div class="balao">${html}</div>`;
+  conversa.appendChild(div);
+  conversa.scrollTop = conversa.scrollHeight;
+  return div;
+}
+
+/* --------------------------------------------------------------------------- */
+async function perguntar(texto){
+  if (!texto.trim() || !sessao) return;
+  $("sugestoes").hidden = true;
+  bolha(sessao.login, `<p>${escapar(texto)}</p>`, "eu");
+  $("entrada").value = "";
+  ajustarAltura();
+
+  const esperando = bolha("assistente",
+    '<div class="pensando"><i></i><i></i><i></i></div>', "agente");
+  $("enviar").disabled = true;
+
+  try {
+    const r = await fetch("/chat/mensagem", {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-Chat-Senha": sessao.senha},
+      body: JSON.stringify({de: sessao.login, texto}),
+    });
+    const dados = await r.json().catch(() => ({}));
+
+    if (r.status === 401 || r.status === 403) {
+      // Sessao invalida: melhor devolver a porta de entrada do que deixar a
+      // pessoa tentando de novo sem entender por que nada acontece.
+      esperando.remove();
+      sair(dados.detail || dados?.erro?.mensagem || "Acesso negado.");
+      return;
+    }
+    if (!r.ok || !dados.ok) {
+      const msg = dados.detail || dados?.erro?.mensagem ||
+                  "Nao foi possivel responder agora.";
+      esperando.className = "msg erro";
+      esperando.querySelector(".balao").innerHTML = `<p>${escapar(msg)}</p>`;
+      return;
+    }
+    esperando.querySelector(".balao").innerHTML = formatar(dados.resposta);
+    if (dados.tokens_entrada) {
+      const uso = document.createElement("span");
+      uso.className = "uso";
+      uso.textContent = `${dados.tokens_entrada + dados.tokens_saida} tokens`;
+      esperando.appendChild(uso);
+    }
+  } catch (e) {
+    esperando.className = "msg erro";
+    esperando.querySelector(".balao").innerHTML =
+      "<p>Sem conexao com o servidor. Tente de novo em instantes.</p>";
+  } finally {
+    $("enviar").disabled = false;
+    conversa.scrollTop = conversa.scrollHeight;
+    $("entrada").focus();
+  }
+}
+
+/* ---------- entrada de texto ---------- */
+function ajustarAltura(){
+  const t = $("entrada");
+  t.style.height = "auto";
+  t.style.height = Math.min(t.scrollHeight, 160) + "px";
+}
+$("entrada").addEventListener("input", ajustarAltura);
+$("entrada").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); perguntar($("entrada").value); }
+});
+$("enviar").addEventListener("click", () => perguntar($("entrada").value));
+$("sugestoes").addEventListener("click", (e) => {
+  if (e.target.tagName === "BUTTON") perguntar(e.target.textContent);
+});
+
+/* ---------- porta de entrada ---------- */
+function entrar(login, senha){
+  sessao = {login: login.trim().toLowerCase(), senha};
+  sessionStorage.setItem("chat_rh", JSON.stringify(sessao));
+  $("quem").textContent = sessao.login;
+  $("gate").hidden = true;
+  $("app").hidden = false;
+  if (!conversa.children.length) {
+    bolha("assistente", formatar(
+      "Bom dia. Consulto a base de Gente & Gestao e respondo com o numero, a " +
+      "leitura e o que fazer a respeito.\n\n" +
+      "Pode perguntar como preferir — sobre a empresa toda, uma area, uma " +
+      "localidade, o custo, ou o que recomendo fazer primeiro."), "agente");
+  }
+  $("entrada").focus();
+}
+
+function sair(motivo){
+  sessao = null;
+  sessionStorage.removeItem("chat_rh");
+  conversa.innerHTML = "";
+  $("sugestoes").hidden = false;
+  $("app").hidden = true;
+  $("gate").hidden = false;
+  $("gateErro").textContent = motivo || "";
+  $("senha").value = "";
+}
+
+$("formEntrar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  $("gateErro").textContent = "";
+  entrar($("login").value, $("senha").value);
+});
+$("sair").addEventListener("click", () => sair(""));
+
+// Retoma a sessao ao recarregar a pagina. Se a senha tiver mudado no servidor,
+// a primeira pergunta devolve 401 e a porta reaparece sozinha.
+try {
+  const guardada = JSON.parse(sessionStorage.getItem("chat_rh") || "null");
+  if (guardada && guardada.login && guardada.senha) entrar(guardada.login, guardada.senha);
+} catch (e) { /* sessionStorage bloqueado: segue pela porta normal */ }
+</script>
+</body>
+</html>
