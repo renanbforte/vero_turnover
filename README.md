@@ -45,6 +45,25 @@ As decisões que mudam o resultado estão todas em `rh_analise.py`:
 - **Regressão logística** só sobre ativos + quem pediu demissão. Quem foi
   desligado pela empresa fica fora: é outro fenômeno.
 
+## Como conferir que isto funciona
+
+```bash
+python -m passos.passo27_testar_chat      # 20 travas de segurança, sem banco e sem API
+python -m passos.passo30_conferir_sql     # as 9 consultas exibidas x o pandas: 656 comparações
+python -m passos.passo29_avaliar_agente   # 10 casos de comportamento do agente (usa a API)
+```
+
+O `passo30` é o que sustenta a promessa do painel: ele executa no PostgreSQL as
+nove consultas que a página exibe e compara valor a valor com o que o pandas
+calculou. Se alguém mexer numa regra e esquecer de atualizar a consulta exibida,
+ele falha.
+
+O `passo29` cobre o que o agente deve e não deve fazer: recusar dado individual,
+recusar grupo com menos de 5 pessoas, ignorar tentativa de sobrescrever as
+instruções, recusar assunto fora de RH — e **continuar respondendo** perguntas
+legítimas de metodologia, que é a regressão mais fácil de causar ao apertar as
+travas.
+
 ## Privacidade
 
 O painel e o agente **nunca devolvem grupo com menos de 5 pessoas**. A trava
